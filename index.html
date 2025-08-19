@@ -1,2115 +1,567 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monscription Indexer - Monad Network</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.1.1/web3.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* Animated background */
-        .bg-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            opacity: 0.1;
-        }
-
-        .bg-animation::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 20% 80%, #6366f1 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, #8b5cf6 0%, transparent 50%),
-                        radial-gradient(circle at 40% 40%, #06b6d4 0%, transparent 50%);
-            animation: float 20s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-30px) rotate(2deg); }
-            66% { transform: translateY(-60px) rotate(-2deg); }
-        }
-
-        /* Header */
-        .header {
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(59, 130, 246, 0.1);
-            padding: 1rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .logo i {
-            color: #3b82f6;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
-
-        .nav-link {
-            color: #cbd5e1;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .nav-link:hover {
-            color: #3b82f6;
-        }
-
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            transition: width 0.3s ease;
-        }
-
-        .nav-link:hover::after {
-            width: 100%;
-        }
-
-        .connect-wallet {
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
-        }
-
-        .connect-wallet:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(59, 130, 246, 0.4);
-        }
-
-        .connect-wallet.connected {
-            background: linear-gradient(45deg, #10b981, #059669);
-        }
-
-        /* Main content */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .hero {
-            text-align: center;
-            margin: 4rem 0;
-            padding: 4rem 0;
-        }
-
-        .hero h1 {
-            font-size: 4rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            background: linear-gradient(45deg, #ffffff, #3b82f6, #8b5cf6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            line-height: 1.1;
-        }
-
-        .hero p {
-            font-size: 1.5rem;
-            color: #94a3b8;
-            margin-bottom: 2rem;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin: 4rem 0;
-        }
-
-        .stat-card {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(59, 130, 246, 0.1);
-            border-radius: 20px;
-            padding: 2rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-10px);
-            border-color: rgba(59, 130, 246, 0.3);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .stat-value {
-            font-size: 3rem;
-            font-weight: 800;
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            color: #94a3b8;
-            font-size: 1.1rem;
-            font-weight: 500;
-        }
-
-        /* Token Explorer */
-        .section {
-            margin: 6rem 0;
-        }
-
-        .section-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 3rem;
-            background: linear-gradient(45deg, #ffffff, #3b82f6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .search-container {
-            max-width: 600px;
-            margin: 0 auto 3rem;
-            position: relative;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 1rem 1rem 1rem 3.5rem;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: 16px;
-            color: white;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 1.25rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #64748b;
-        }
-
-        .tokens-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 2rem;
-        }
-
-        .token-card {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(59, 130, 246, 0.1);
-            border-radius: 20px;
-            padding: 2rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .token-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .token-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .token-card:hover {
-            transform: translateY(-10px);
-            border-color: rgba(59, 130, 246, 0.3);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .token-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .token-tick {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #3b82f6;
-        }
-
-        .token-status {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .status-active {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .status-completed {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
-            border: 1px solid rgba(59, 130, 246, 0.3);
-        }
-
-        .token-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .info-label {
-            color: #94a3b8;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .info-value {
-            color: white;
-            font-weight: 600;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(71, 85, 105, 0.3);
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 1rem 0;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-
-        .progress-text {
-            text-align: center;
-            color: #cbd5e1;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-        }
-
-        .token-actions {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 0.75rem;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            text-align: center;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: rgba(71, 85, 105, 0.3);
-            color: #cbd5e1;
-            border: 1px solid rgba(71, 85, 105, 0.5);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 8px 30px rgba(59, 130, 246, 0.4);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(71, 85, 105, 0.5);
-        }
-
-        /* Loading states */
-        .loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 4rem 0;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(59, 130, 246, 0.2);
-            border-left: 4px solid #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Footer */
-        .footer {
-            background: rgba(15, 23, 42, 0.95);
-            border-top: 1px solid rgba(59, 130, 246, 0.1);
-            padding: 3rem 0 2rem;
-            margin-top: 6rem;
-            text-align: center;
-        }
-
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .footer-link {
-            color: #94a3b8;
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .footer-link:hover {
-            color: #3b82f6;
-        }
-
-        .footer-credit {
-            color: #64748b;
-            margin-bottom: 1rem;
-        }
-
-        .footer-credit a {
-            color: #3b82f6;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .footer-credit a:hover {
-            text-decoration: underline;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-container {
-                padding: 0 1rem;
-            }
-
-            .nav-links {
-                gap: 1rem;
-            }
-
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-
-            .hero p {
-                font-size: 1.2rem;
-            }
-
-            .container {
-                padding: 1rem;
-            }
-
-            .tokens-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .token-info {
-                grid-template-columns: 1fr;
-            }
-
-            .footer-links {
-                flex-direction: column;
-                gap: 1rem;
-            }
-        }
-
-        /* Status indicators */
-        .network-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 20px;
-            color: #10b981;
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: currentColor;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Tooltip */
-        .tooltip {
-            position: relative;
-            cursor: help;
-        }
-
-        .tooltip::before {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 0.5rem 1rem;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            white-space: nowrap;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-
-        .tooltip:hover::before {
-            opacity: 1;
-            visibility: visible;
-            transform: translateX(-50%) translateY(-5px);
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monscription Indexer — Monad Testnet</title>
+  <meta name="description" content="Real-time indexer untuk Monscription di Monad Testnet. Menampilkan token, progres mint, holders, dan stream inscribe event">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%230af'%3E%3C/circle%3E%3Ctext x='50' y='58' font-size='50' text-anchor='middle' fill='white' font-family='Arial'%3EM%3C/text%3E%3C/svg%3E" />
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Icon -->
+  <script src="https://unpkg.com/lucide@0.456.0/dist/umd/lucide.min.js"></script>
+  <!-- Ethers v5 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <!-- Day.js for time formatting -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
+  <script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    /* Luxury glassmorphism */
+    .glass { background: rgba(13,17,23,.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08) }
+    .card { border-radius: 1.25rem }
+    .gradient-text {
+      background: linear-gradient(135deg,#8b5cf6 0%, #06b6d4 50%, #22c55e 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .btn { border-radius: 9999px; }
+    .btn-primary { background: linear-gradient(135deg,#06b6d4,#3b82f6); }
+    .btn-primary:hover { filter: brightness(1.1) }
+    .badge { border:1px solid rgba(255,255,255,.1) }
+    .skeleton { background: linear-gradient(90deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.12) 37%, rgba(255,255,255,.06) 63%); background-size: 400% 100%; animation: shimmer 1.5s infinite; }
+    @keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
+    .table-fixed { table-layout: fixed }
+    /* Tooltip */
+    .tooltip { position:relative }
+    .tooltip:hover::after { content: attr(data-tip); position:absolute; top: -38px; left:50%; transform:translateX(-50%); white-space:nowrap; padding:6px 10px; background:#111827; border:1px solid rgba(255,255,255,.08); border-radius:10px; font-size:12px; color:#e5e7eb }
+  </style>
 </head>
-<body>
-    <div class="bg-animation"></div>
-    
-    <header class="header">
-        <div class="nav-container">
-            <div class="logo">
-                <i class="fas fa-cube"></i>
-                Monscription
-            </div>
-            <nav class="nav-links">
-                <a href="#" class="nav-link">Explorer</a>
-                <a href="#" class="nav-link">Analytics</a>
-                <a href="https://mons-mon-20.vercel.app/" class="nav-link" target="_blank">Mint</a>
-                <div class="network-status">
-                    <div class="status-dot"></div>
-                    Monad Testnet
-                </div>
-                <button class="connect-wallet" onclick="connectWallet()">
-                    <i class="fas fa-wallet"></i>
-                    Connect Wallet
-                </button>
-            </nav>
+<body class="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black text-slate-200">
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-black/40 backdrop-blur border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-500 via-cyan-400 to-emerald-400 grid place-items-center font-black">M</div>
+      <div>
+        <h1 class="text-xl md:text-2xl font-bold tracking-tight">Monscription Indexer <span class="text-xs ml-2 align-middle px-2 py-0.5 rounded-full bg-white/10">Monad Testnet</span></h1>
+        <p class="text-xs text-slate-400">Contract: <code id="contractLink" class="underline decoration-dotted cursor-pointer"></code></p>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <a href="https://mons-mon-20.vercel.app/" target="_blank" class="btn btn-primary px-4 py-2 text-sm font-medium">Mint Portal</a>
+        <button id="connectBtn" class="px-4 py-2 text-sm font-semibold bg-white/10 hover:bg-white/20 rounded-full">Connect Wallet</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="max-w-7xl mx-auto px-4 pt-8 pb-4">
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="card glass p-5">
+        <div class="text-slate-400 text-xs">Network</div>
+        <div class="flex items-end gap-2 mt-1">
+          <div class="text-2xl font-bold">Monad Testnet</div>
+          <span id="chainBadge" class="badge text-xs px-2 py-1 rounded-full bg-white/5">Chain ID 10143</span>
         </div>
-    </header>
-
-    <main class="container">
-        <section class="hero" data-aos="fade-up">
-            <h1>Monscription Indexer</h1>
-            <p>The premier explorer for MON-20 tokens on the Monad Network. Discover, track, and analyze inscription tokens with real-time data.</p>
-        </section>
-
-        <section class="stats-grid" data-aos="fade-up" data-aos-delay="200">
-            <div class="stat-card">
-                <div class="stat-value" id="totalTokens">0</div>
-                <div class="stat-label">Total Tokens</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalHolders">0</div>
-                <div class="stat-label">Total Holders</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalInscriptions">0</div>
-                <div class="stat-label">Total Inscriptions</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="networkHealth">100%</div>
-                <div class="stat-label">Network Health</div>
-            </div>
-        </section>
-
-        <section class="section">
-            <h2 class="section-title" data-aos="fade-up">Token Explorer</h2>
-            
-            <div class="search-container" data-aos="fade-up" data-aos-delay="200">
-                <input type="text" class="search-input" id="searchInput" placeholder="Search tokens by tick...">
-                <i class="fas fa-search search-icon"></i>
-            </div>
-
-            <div id="tokensContainer" class="tokens-grid">
-                <div class="loading">
-                    <div class="spinner"></div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-links">
-                <a href="#" class="footer-link">About</a>
-                <a href="#" class="footer-link">API</a>
-                <a href="#" class="footer-link">Documentation</a>
-                <a href="https://x.com/ega_2ez4crypto" target="_blank" class="footer-link">Contact</a>
-            </div>
-            <div class="footer-credit">
-                Created by <a href="https://x.com/ega_2ez4crypto" target="_blank">@ega_2ez4crypto</a>
-            </div>
-            <div style="color: #64748b; font-size: 0.875rem;">
-                © 2025 Monscription Indexer. Built for the Monad Community.
-            </div>
+        <div class="mt-3 text-sm text-slate-400 break-all">RPC: <span id="rpcLink" class="underline decoration-dotted cursor-pointer"></span></div>
+      </div>
+      <div class="card glass p-5">
+        <div class="text-slate-400 text-xs">First Token</div>
+        <div class="text-2xl font-bold gradient-text">MONS</div>
+        <div class="mt-1 text-sm text-slate-400">Token perdana di Monscription</div>
+      </div>
+      <div class="card glass p-5">
+        <div class="flex items-center gap-2">
+          <div class="text-slate-400 text-xs">Indexer Status</div>
+          <span id="liveDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         </div>
-    </footer>
+        <div class="mt-2 text-2xl font-bold" id="blockHeight">—</div>
+        <div class="text-sm text-slate-400">Synced up to latest block</div>
+      </div>
+    </div>
+  </section>
 
-    <script>
-        // Contract configuration
-        const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
-        const CHAIN_ID = 10143;
-        const RPC_URL = 'https://testnet-rpc.monad.xyz';
-        
-        const CONTRACT_ABI = [
-            {
-                "inputs": [],
-                "stateMutability": "nonpayable",
-                "type": "constructor"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {
-                        "indexed": true,
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    },
-                    {
-                        "indexed": false,
-                        "internalType": "uint256",
-                        "name": "maxSupply",
-                        "type": "uint256"
-                    },
-                    {
-                        "indexed": false,
-                        "internalType": "uint256",
-                        "name": "limitPerMint",
-                        "type": "uint256"
-                    },
-                    {
-                        "indexed": false,
-                        "internalType": "address",
-                        "name": "deployer",
-                        "type": "address"
-                    }
-                ],
-                "name": "Deploy",
-                "type": "event"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    }
-                ],
-                "name": "getMintProgress",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "minted",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "maxSupply",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "percentage",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    }
-                ],
-                "name": "getTokenInfo",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "maxSupply",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "limitPerMint",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "minted",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "deployer",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "holdersCount",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    }
-                ],
-                "name": "getTotalMinted",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "",
-                        "type": "string"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "holders",
-                "outputs": [
-                    {
-                        "internalType": "address",
-                        "name": "",
-                        "type": "address"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "inscriptionCounter",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "",
-                        "type": "string"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "",
-                        "type": "address"
-                    }
-                ],
-                "name": "isHolder",
-                "outputs": [
-                    {
-                        "internalType": "bool",
-                        "name": "",
-                        "type": "bool"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "mintFee",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "owner",
-                "outputs": [
-                    {
-                        "internalType": "address",
-                        "name": "",
-                        "type": "address"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "",
-                        "type": "string"
-                    }
-                ],
-                "name": "tokens",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "maxSupply",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "limitPerMint",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "deployer",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "bool",
-                        "name": "exists",
-                        "type": "bool"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "deployedAt",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "",
-                        "type": "string"
-                    }
-                ],
-                "name": "totalMinted",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            }
-        ];
+  <!-- Controls -->
+  <section class="max-w-7xl mx-auto px-4 pb-4 flex flex-col md:flex-row gap-3 md:items-center">
+    <div class="flex items-center gap-2 glass p-2 rounded-2xl grow">
+      <svg data-lucide="search" class="w-5 h-5 opacity-60"></svg>
+      <input id="searchInput" class="bg-transparent focus:outline-none w-full" placeholder="Cari tick, deployer, address holder…" />
+    </div>
+    <div class="glass rounded-2xl p-2 flex items-center gap-2">
+      <label class="text-sm text-slate-400">Dari blok</label>
+      <input id="fromBlock" type="number" class="w-28 bg-white/5 rounded-lg px-2 py-1" placeholder="0" />
+      <label class="text-sm text-slate-400">s/d</label>
+      <input id="toBlock" type="number" class="w-28 bg-white/5 rounded-lg px-2 py-1" placeholder="latest" />
+      <button id="rescanBtn" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-sm">Rescan</button>
+    </div>
+    <div class="glass rounded-2xl p-2 flex items-center gap-2">
+      <button id="exportCsv" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-sm">Export CSV</button>
+      <button id="exportJson" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-sm">Export JSON</button>
+    </div>
+  </section>
 
-        let web3;
-        let contract;
-        let userAccount;
-        let allTokens = [];
-        let filteredTokens = [];
+  <!-- Content -->
+  <main class="max-w-7xl mx-auto px-4 pb-16 grid lg:grid-cols-3 gap-6">
+    <!-- Tokens -->
+    <section class="lg:col-span-2 card glass p-0 overflow-hidden">
+      <div class="p-4 flex items-center justify-between border-b border-white/10">
+        <h2 class="text-lg font-semibold">Tokens Terindeks</h2>
+        <div class="flex gap-2 text-xs text-slate-400">
+          <span id="tokenCount">0</span>
+          <span>items</span>
+        </div>
+      </div>
+      <div class="overflow-auto">
+        <table class="w-full table-fixed">
+          <thead class="text-slate-400 text-xs uppercase">
+            <tr class="text-left">
+              <th class="p-3 w-24">Tick</th>
+              <th class="p-3">Max/Limit</th>
+              <th class="p-3">Minted</th>
+              <th class="p-3">Progress</th>
+              <th class="p-3">Holders</th>
+              <th class="p-3">Deployer</th>
+              <th class="p-3 w-20">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tokenTbody" class="text-sm">
+            <!-- rows injected here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-        // Initialize the application
-        async function init() {
-            console.log('Initializing Monscription Indexer...');
-            
-            try {
-                // Initialize Web3 with RPC
-                web3 = new Web3(RPC_URL);
-                contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-                
-                // Test connection first
-                const isConnected = await testConnection();
-                if (!isConnected) {
-                    throw new Error('Failed to connect to Monad network');
-                }
-                
-                // Start loading data
-                console.log('Loading contract data...');
-                await loadContractData();
-                
-                console.log('Loading tokens...');
-                await loadTokens();
-                
-                // Setup search functionality
-                setupSearch();
-                
-                console.log('Initialization complete!');
-                
-            } catch (error) {
-                console.error('Initialization error:', error);
-                showError(`Failed to initialize application: ${error.message}`);
-                
-                // Try to load sample data as fallback
-                loadSampleData();
-            }
-        }
+    <!-- Live Inscribe Stream -->
+    <aside class="card glass p-0 overflow-hidden">
+      <div class="p-4 border-b border-white/10 flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Live Inscribe</h2>
+        <span id="inscribeCount" class="text-xs text-slate-400">0</span>
+      </div>
+      <div id="inscribeList" class="max-h-[640px] overflow-auto divide-y divide-white/5">
+        <!-- items injected here -->
+      </div>
+    </aside>
+  </main>
 
-        // Test connection to the network
-        async function testConnection() {
-            try {
-                console.log('Testing connection to Monad network...');
-                const blockNumber = await web3.eth.getBlockNumber();
-                console.log('Current block number:', blockNumber);
-                
-                const contractCode = await web3.eth.getCode(CONTRACT_ADDRESS);
-                if (contractCode === '0x') {
-                    throw new Error('Contract not found at the specified address');
-                }
-                console.log('Contract found and verified');
-                
-                return true;
-            } catch (error) {
-                console.error('Connection test failed:', error);
-                return false;
-            }
-        }
+  <!-- Footer -->
+  <footer class="border-t border-white/10">
+    <div class="max-w-7xl mx-auto px-4 py-6 text-sm text-slate-400 flex flex-col md:flex-row gap-2 md:items-center">
+      <div>
+        © <span id="year"></span> Monscription Indexer. Dibuat mewah dan proper. Kredit: <a class="underline" target="_blank" href="https://x.com/ega_2ez4crypto">created by https://x.com/ega_2ez4crypto</a>
+      </div>
+      <div class="md:ml-auto flex items-center gap-3">
+        <a class="underline" target="_blank" href="https://mons-mon-20.vercel.app/">Mint MONS</a>
+        <a class="underline" target="_blank" id="etherscanLink">Explorer</a>
+        <button id="copyJson" class="px-3 py-1 bg-white/5 rounded-lg">Salin Snapshot</button>
+      </div>
+    </div>
+  </footer>
 
-        // Connect wallet functionality with better error handling
-        async function connectWallet() {
-            console.log('Attempting to connect wallet...');
-            
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    // Request account access
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    userAccount = accounts[0];
-                    console.log('Connected account:', userAccount);
-                    
-                    // Check current chain
-                    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-                    const targetChainId = '0x' + CHAIN_ID.toString(16);
-                    
-                    console.log('Current chain ID:', currentChainId);
-                    console.log('Target chain ID:', targetChainId);
-                    
-                    if (currentChainId !== targetChainId) {
-                        try {
-                            // Try to switch to Monad Testnet
-                            await window.ethereum.request({
-                                method: 'wallet_switchEthereumChain',
-                                params: [{ chainId: targetChainId }],
-                            });
-                            console.log('Switched to Monad Testnet');
-                        } catch (switchError) {
-                            console.log('Switch error:', switchError);
-                            // This error code indicates that the chain has not been added to MetaMask
-                            if (switchError.code === 4902) {
-                                try {
-                                    await window.ethereum.request({
-                                        method: 'wallet_addEthereumChain',
-                                        params: [{
-                                            chainId: targetChainId,
-                                            chainName: 'Monad Testnet',
-                                            nativeCurrency: {
-                                                name: 'MON',
-                                                symbol: 'MON',
-                                                decimals: 18
-                                            },
-                                            rpcUrls: [RPC_URL],
-                                            blockExplorerUrls: ['https://explorer.testnet.monad.xyz/']
-                                        }]
-                                    });
-                                    console.log('Added Monad Testnet to wallet');
-                                } catch (addError) {
-                                    console.error('Failed to add network:', addError);
-                                    alert('Failed to add Monad Testnet. Please add it manually.');
-                                    return;
-                                }
-                            } else {
-                                console.error('Failed to switch network:', switchError);
-                                alert('Please switch to Monad Testnet manually');
-                                return;
-                            }
-                        }
-                    }
-                    
-                    updateWalletUI();
-                    
-                    // Reinitialize Web3 with user's provider
-                    web3 = new Web3(window.ethereum);
-                    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-                    
-                    // Reload data with user's connection
-                    console.log('Reloading data with wallet connection...');
-                    await loadContractData();
-                    await loadTokens();
-                    
-                } catch (error) {
-                    console.error('Wallet connection error:', error);
-                    alert('Failed to connect wallet: ' + error.message);
-                }
-            } else {
-                alert('Please install MetaMask or another Web3 wallet to connect');
-            }
-        }
+  <!-- Detail Modal -->
+  <dialog id="detailModal" class="backdrop:bg-black/60 rounded-2xl w-full max-w-2xl p-0 bg-slate-900 text-slate-200 border border-white/10">
+    <div class="p-5 border-b border-white/10 flex items-center justify-between">
+      <div>
+        <div class="text-sm text-slate-400">Detail Token</div>
+        <div id="modalTick" class="text-2xl font-bold"></div>
+      </div>
+      <button onclick="closeModal()" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl">Close</button>
+    </div>
+    <div class="p-5 grid md:grid-cols-2 gap-4">
+      <div class="glass rounded-2xl p-4">
+        <div class="text-sm text-slate-400">Info</div>
+        <div id="modalInfo" class="mt-2 text-sm"></div>
+      </div>
+      <div class="glass rounded-2xl p-4">
+        <div class="text-sm text-slate-400 mb-2">Top Holders (max 100)</div>
+        <ol id="modalHolders" class="text-sm list-decimal list-inside space-y-1"></ol>
+      </div>
+    </div>
+    <div class="p-5 border-t border-white/10 text-xs text-slate-400">Data langsung dari kontrak pada saat dibuka.</div>
+  </dialog>
 
-        // Update wallet UI
-        function updateWalletUI() {
-            const btn = document.querySelector('.connect-wallet');
-            if (userAccount) {
-                btn.textContent = `${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
-                btn.classList.add('connected');
-            }
-        }
+  <script>
+    // ====== CONFIG ======
+    const RPC_URL = 'https://testnet-rpc.monad.xyz';
+    const CHAIN_ID = 10143; // Monad Testnet
+    const CONTRACT_ADDRESS = '0x07169f0F890C3595421512D98DC79b8bce6E5fA6';
+    const ABI = [
+      {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
+      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"uint256","name":"maxSupply","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"indexed":false,"internalType":"address","name":"deployer","type":"address"}],"name":"Deploy","type":"event"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"}],"name":"deployToken","outputs":[],"stateMutability":"payable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"emergencyWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"string","name":"tick","type":"string"},{"indexed":false,"internalType":"string","name":"operation","type":"string"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"data","type":"string"},{"indexed":false,"internalType":"uint256","name":"inscriptionNumber","type":"uint256"}],"name":"Inscribe","type":"event"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"payable","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setDeployFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setMintFee","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"string","name":"tick","type":"string"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"stateMutability":"payable","type":"receive"},
+      {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"string","name":"","type":"string"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"deployFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"tick","type":"string"}],"name":"getBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHolders","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getHoldersCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getMintProgress","outputs":[{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"percentage","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTokenInfo","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"uint256","name":"minted","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"uint256","name":"holdersCount","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"tick","type":"string"}],"name":"getTotalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"holders","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"inscriptionCounter","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"isHolder","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"mintFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"tokens","outputs":[{"internalType":"uint256","name":"maxSupply","type":"uint256"},{"internalType":"uint256","name":"limitPerMint","type":"uint256"},{"internalType":"address","name":"deployer","type":"address"},{"internalType":"bool","name":"exists","type":"bool"},{"internalType":"uint256","name":"deployedAt","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"totalMinted","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+    ];
 
-        // Load contract data
-        async function loadContractData() {
-            try {
-                console.log('Fetching inscription counter...');
-                
-                // Get inscription counter with timeout
-                const inscriptionCount = await Promise.race([
-                    contract.methods.inscriptionCounter().call(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
-                ]);
-                
-                console.log('Inscription count:', inscriptionCount);
-                document.getElementById('totalInscriptions').textContent = formatNumber(inscriptionCount);
-                
-                // Animation for numbers
-                animateValue('totalInscriptions', 0, parseInt(inscriptionCount), 2000);
-                
-            } catch (error) {
-                console.error('Error loading contract data:', error);
-                // Set default value
-                document.getElementById('totalInscriptions').textContent = '0';
-            }
-        }
+    // ====== GLOBALS ======
+    const state = {
+      provider: null,
+      readonlyProvider: null,
+      signer: null,
+      contract: null,
+      tokens: [], // {tick, maxSupply, limitPerMint, minted, holdersCount, deployer, deployedAt}
+      inscribes: [], // latest first
+      lastScannedBlock: 0,
+      latestBlock: 0,
+    };
 
-        // Load tokens from events with better error handling
-        async function loadTokens() {
-            try {
-                console.log('Fetching deploy events...');
-                
-                // Try to get recent events first (last 1000 blocks)
-                let deployEvents = [];
-                
-                try {
-                    const currentBlock = await web3.eth.getBlockNumber();
-                    const fromBlock = Math.max(0, currentBlock - 1000);
-                    
-                    deployEvents = await contract.getPastEvents('Deploy', {
-                        fromBlock: fromBlock,
-                        toBlock: 'latest'
-                    });
-                    
-                    console.log(`Found ${deployEvents.length} deploy events in recent blocks`);
-                    
-                    // If no recent events, try from beginning (with limit)
-                    if (deployEvents.length === 0) {
-                        deployEvents = await contract.getPastEvents('Deploy', {
-                            fromBlock: 0,
-                            toBlock: 'latest'
-                        });
-                        console.log(`Found ${deployEvents.length} total deploy events`);
-                    }
-                    
-                } catch (eventError) {
-                    console.error('Error fetching events:', eventError);
-                    // Fallback: try to get MONS token data directly
-                    console.log('Trying to get MONS token directly...');
-                    const monsData = await getTokenData('MONS');
-                    if (monsData) {
-                        allTokens = [monsData];
-                        console.log('Successfully loaded MONS token data');
-                    }
-                }
+    // ====== UTILS ======
+    const $ = (s)=>document.querySelector(s);
+    const $$ = (s)=>Array.from(document.querySelectorAll(s));
+    const fmt = (n)=> new Intl.NumberFormat('en-US').format(Number(n));
+    const shortAddr = (a)=> a ? a.slice(0,6)+'…'+a.slice(-4) : '';
 
-                // Process events if we have any
-                if (deployEvents.length > 0) {
-                    console.log('Processing deploy events...');
-                    
-                    const tokenPromises = deployEvents.map(async (event, index) => {
-                        console.log(`Processing token ${index + 1}/${deployEvents.length}: ${event.returnValues.tick}`);
-                        return await getTokenData(event.returnValues.tick);
-                    });
+    function setExplorerLinks(){
+      const base = 'https://explorer.monad.xyz'; // adjust if needed for testnet explorer
+      const addrUrl = `${base}/address/${CONTRACT_ADDRESS}`;
+      const rpcUrl = RPC_URL;
+      $('#contractLink').textContent = CONTRACT_ADDRESS;
+      $('#contractLink').onclick = ()=>window.open(addrUrl,'_blank');
+      $('#rpcLink').textContent = rpcUrl;
+      $('#rpcLink').onclick = ()=>window.open(rpcUrl,'_blank');
+      $('#etherscanLink').href = addrUrl;
+    }
 
-                    const tokenResults = await Promise.allSettled(tokenPromises);
-                    allTokens = tokenResults
-                        .filter(result => result.status === 'fulfilled' && result.value !== null)
-                        .map(result => result.value);
-                        
-                    console.log(`Successfully loaded ${allTokens.length} tokens`);
-                }
+    function progressBar(p){
+      return `<div class="w-full bg-white/10 rounded-full overflow-hidden"><div class="h-2" style="width:${p}% ; background: linear-gradient(90deg,#22c55e,#3b82f6)"></div></div>`
+    }
 
-                // If still no tokens, add sample data for demonstration
-                if (allTokens.length === 0) {
-                    console.log('No tokens found, loading sample data...');
-                    loadSampleData();
-                    return;
-                }
-                
-                // Update stats
-                updateStats();
-                filteredTokens = [...allTokens];
-                renderTokens();
-                
-            } catch (error) {
-                console.error('Error loading tokens:', error);
-                showError(`Failed to load tokens: ${error.message}`);
-                loadSampleData();
-            }
-        }
+    function rowSkeleton(){
+      return `<tr class="border-t border-white/5"><td colspan="7"><div class='p-3 skeleton h-8 rounded-lg'></div></td></tr>`
+    }
 
-        // Load sample data for demonstration
-        function loadSampleData() {
-            console.log('Loading sample data...');
-            
-            allTokens = [
-                {
-                    tick: 'MONS',
-                    maxSupply: 21000000,
-                    limitPerMint: 1000,
-                    minted: 15750000,
-                    deployer: '0x1234567890123456789012345678901234567890',
-                    holdersCount: 1250,
-                    percentage: 75,
-                    isCompleted: false
-                },
-                {
-                    tick: 'TEST',
-                    maxSupply: 1000000,
-                    limitPerMint: 100,
-                    minted: 1000000,
-                    deployer: '0x0987654321098765432109876543210987654321',
-                    holdersCount: 500,
-                    percentage: 100,
-                    isCompleted: true
-                }
-            ];
-            
-            updateStats();
-            filteredTokens = [...allTokens];
-            renderTokens();
-            
-            // Show info message
-            setTimeout(() => {
-                const container = document.getElementById('tokensContainer');
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'info-banner';
-                infoDiv.innerHTML = `
-                    <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 1rem; margin-bottom: 2rem; text-align: center;">
-                        <i class="fas fa-info-circle" style="color: #3b82f6; margin-right: 0.5rem;"></i>
-                        <span style="color: #3b82f6;">Showing sample data. Connect to Monad network for real-time data.</span>
-                    </div>
-                `;
-                container.insertBefore(infoDiv, container.firstChild);
-            }, 1000);
-        }
+    function download(filename, text){
+      const a = document.createElement('a');
+      a.setAttribute('href','data:text/plain;charset=utf-8,'+encodeURIComponent(text));
+      a.setAttribute('download', filename);
+      a.click();
+    }
 
-        // Update statistics
-        function updateStats() {
-            document.getElementById('totalTokens').textContent = allTokens.length;
-            animateValue('totalTokens', 0, allTokens.length, 2000);
-            
-            const totalHolders = allTokens.reduce((sum, token) => sum + token.holdersCount, 0);
-            document.getElementById('totalHolders').textContent = formatNumber(totalHolders);
-            animateValue('totalHolders', 0, totalHolders, 2000);
-        }
+    function toCSV(rows){
+      const headers = Object.keys(rows[0]||{});
+      const esc = v => '"'+String(v).replace(/"/g,'""')+'"';
+      const lines = [headers.join(',')].concat(rows.map(r=>headers.map(h=>esc(r[h] ?? '')).join(',')));
+      return lines.join('\n');
+    }
 
-        // Get token data with better error handling
-        async function getTokenData(tick) {
-            try {
-                console.log(`Fetching data for token: ${tick}`);
-                
-                // Add timeout to prevent hanging
-                const tokenInfo = await Promise.race([
-                    contract.methods.getTokenInfo(tick).call(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-                ]);
-                
-                const progress = await Promise.race([
-                    contract.methods.getMintProgress(tick).call(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-                ]);
-                
-                const tokenData = {
-                    tick: tick,
-                    maxSupply: parseInt(tokenInfo.maxSupply),
-                    limitPerMint: parseInt(tokenInfo.limitPerMint),
-                    minted: parseInt(tokenInfo.minted),
-                    deployer: tokenInfo.deployer,
-                    holdersCount: parseInt(tokenInfo.holdersCount),
-                    percentage: parseInt(progress.percentage),
-                    isCompleted: parseInt(progress.percentage) >= 100
-                };
-                
-                console.log(`Token ${tick} data:`, tokenData);
-                return tokenData;
-                
-            } catch (error) {
-                console.error(`Error getting token data for ${tick}:`, error);
-                return null;
-            }
-        }
+    // ====== RENDER ======
+    function renderTokens(){
+      const q = ($('#searchInput').value||'').toLowerCase().trim();
+      const filtered = state.tokens.filter(t =>
+        t.tick.toLowerCase().includes(q) ||
+        (t.deployer||'').toLowerCase().includes(q)
+      );
+      $('#tokenCount').textContent = fmt(filtered.length);
+      const tbody = $('#tokenTbody');
+      tbody.innerHTML = '';
+      for (const t of filtered){
+        const perc = t.maxSupply > 0 ? Math.min(100, Number((Number(t.minted)/Number(t.maxSupply))*100).toFixed(2)) : 0;
+        const tr = document.createElement('tr');
+        tr.className = 'border-t border-white/5 hover:bg-white/5';
+        tr.innerHTML = `
+          <td class="p-3 font-semibold">${t.tick}</td>
+          <td class="p-3">${fmt(t.maxSupply)} <span class='text-slate-500'>/</span> ${fmt(t.limitPerMint)}</td>
+          <td class="p-3">${fmt(t.minted)}</td>
+          <td class="p-3">${progressBar(perc)}<div class='text-xs text-slate-400 mt-1'>${perc}%</div></td>
+          <td class="p-3">${fmt(t.holdersCount)}</td>
+          <td class="p-3"><span class='tooltip underline decoration-dotted' data-tip='${t.deployer}'>${shortAddr(t.deployer)}</span></td>
+          <td class="p-3">
+            <button class="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-xl text-xs" data-tick="${t.tick}">Detail</button>
+          </td>`;
+        tr.querySelector('button').addEventListener('click', ()=>openModal(t.tick));
+        tbody.appendChild(tr);
+      }
+      if (!filtered.length){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="7" class="p-6 text-center text-slate-500">Belum ada token terindeks pada rentang blok ini.</td>`;
+        tbody.appendChild(tr);
+      }
+    }
 
-        // Render tokens
-        function renderTokens() {
-            const container = document.getElementById('tokensContainer');
-            
-            if (filteredTokens.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; grid-column: 1 / -1; padding: 4rem 0;">
-                        <i class="fas fa-search" style="font-size: 4rem; color: #64748b; margin-bottom: 1rem;"></i>
-                        <h3 style="color: #94a3b8; margin-bottom: 0.5rem;">No tokens found</h3>
-                        <p style="color: #64748b;">Try adjusting your search criteria</p>
-                    </div>
-                `;
-                return;
-            }
+    function renderInscribe(){
+      const box = $('#inscribeList');
+      box.innerHTML = '';
+      for (const e of state.inscribes.slice(0,200)){
+        const div = document.createElement('div');
+        div.className = 'p-4 hover:bg-white/5';
+        div.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="text-sm"><span class="px-2 py-0.5 rounded-full bg-white/10 mr-2">${e.tick}</span> ${e.operation} <span class="text-slate-400">${fmt(e.amount)}</span></div>
+            <div class="text-xs text-slate-400">#${e.blockNumber} · ${dayjs(e.time*1000).fromNow()}</div>
+          </div>
+          <div class="text-xs text-slate-400 mt-1">by <span class='underline decoration-dotted tooltip' data-tip='${e.user}'>${shortAddr(e.user)}</span> • insc#${e.inscriptionNumber} • ${e.data || ''}</div>
+        `;
+        box.appendChild(div);
+      }
+      $('#inscribeCount').textContent = fmt(state.inscribes.length);
+    }
 
-            container.innerHTML = filteredTokens.map(token => `
-                <div class="token-card" data-aos="fade-up" data-aos-delay="100">
-                    <div class="token-header">
-                        <div class="token-tick">${token.tick}</div>
-                        <div class="token-status ${token.isCompleted ? 'status-completed' : 'status-active'}">
-                            ${token.isCompleted ? 'Completed' : 'Active'}
-                        </div>
-                    </div>
-                    
-                    <div class="token-info">
-                        <div class="info-item">
-                            <div class="info-label">Max Supply</div>
-                            <div class="info-value">${formatNumber(token.maxSupply)}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Limit/Mint</div>
-                            <div class="info-value">${formatNumber(token.limitPerMint)}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Minted</div>
-                            <div class="info-value">${formatNumber(token.minted)}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Holders</div>
-                            <div class="info-value">${formatNumber(token.holdersCount)}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${token.percentage}%"></div>
-                    </div>
-                    <div class="progress-text">${token.percentage}% Minted</div>
-                    
-                    <div class="token-actions">
-                        <a href="https://mons-mon-20.vercel.app/" target="_blank" class="btn btn-primary">
-                            <i class="fas fa-hammer"></i>
-                            Mint
-                        </a>
-                        <button class="btn btn-secondary" onclick="viewTokenDetails('${token.tick}')">
-                            <i class="fas fa-info-circle"></i>
-                            Details
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-
-            // Refresh AOS
-            if (typeof AOS !== 'undefined') {
-                AOS.refresh();
-            }
-        }
-
-        // Setup search functionality
-        function setupSearch() {
-            const searchInput = document.getElementById('searchInput');
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase().trim();
-                
-                if (query === '') {
-                    filteredTokens = [...allTokens];
-                } else {
-                    filteredTokens = allTokens.filter(token => 
-                        token.tick.toLowerCase().includes(query)
-                    );
-                }
-                
-                renderTokens();
-            });
-        }
-
-        // View token details
-        async function viewTokenDetails(tick) {
-            try {
-                const token = allTokens.find(t => t.tick === tick);
-                if (!token) return;
-
-                const holders = await contract.methods.getHolders(tick).call();
-                
-                const modal = document.createElement('div');
-                modal.className = 'modal';
-                modal.innerHTML = `
-                    <div class="modal-content" onclick="event.stopPropagation()">
-                        <div class="modal-header">
-                            <h2>${tick} Token Details</h2>
-                            <button class="modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <span class="detail-label">Tick:</span>
-                                    <span class="detail-value">${token.tick}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Max Supply:</span>
-                                    <span class="detail-value">${formatNumber(token.maxSupply)}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Limit per Mint:</span>
-                                    <span class="detail-value">${formatNumber(token.limitPerMint)}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Total Minted:</span>
-                                    <span class="detail-value">${formatNumber(token.minted)}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Holders Count:</span>
-                                    <span class="detail-value">${formatNumber(token.holdersCount)}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Deployer:</span>
-                                    <span class="detail-value">
-                                        <a href="https://explorer.testnet.monad.xyz/address/${token.deployer}" target="_blank">
-                                            ${token.deployer}
-                                        </a>
-                                    </span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Progress:</span>
-                                    <span class="detail-value">${token.percentage}%</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Status:</span>
-                                    <span class="detail-value ${token.isCompleted ? 'status-completed' : 'status-active'}">
-                                        ${token.isCompleted ? 'Minting Completed' : 'Minting Active'}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div class="holders-section">
-                                <h3>Top Holders</h3>
-                                <div class="holders-list">
-                                    ${holders.slice(0, 10).map((holder, index) => `
-                                        <div class="holder-item">
-                                            <span class="holder-rank">#${index + 1}</span>
-                                            <span class="holder-address">
-                                                <a href="https://explorer.testnet.monad.xyz/address/${holder}" target="_blank">
-                                                    ${holder.slice(0, 6)}...${holder.slice(-4)}
-                                                </a>
-                                            </span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                modal.onclick = () => modal.remove();
-                document.body.appendChild(modal);
-                
-            } catch (error) {
-                console.error('Error viewing token details:', error);
-                alert('Failed to load token details');
-            }
-        }
-
-        // Utility functions
-        function formatNumber(num) {
-            if (num >= 1000000) {
-                return (num / 1000000).toFixed(1) + 'M';
-            } else if (num >= 1000) {
-                return (num / 1000).toFixed(1) + 'K';
-            }
-            return num.toString();
-        }
-
-        function animateValue(elementId, start, end, duration) {
-            const element = document.getElementById(elementId);
-            const range = end - start;
-            const increment = range / (duration / 16);
-            let current = start;
-            
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= end) {
-                    current = end;
-                    clearInterval(timer);
-                }
-                element.textContent = Math.floor(current);
-            }, 16);
-        }
-
-        function showError(message) {
-            const container = document.getElementById('tokensContainer');
-            container.innerHTML = `
-                <div style="text-align: center; grid-column: 1 / -1; padding: 4rem 0;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #ef4444; margin-bottom: 1rem;"></i>
-                    <h3 style="color: #ef4444; margin-bottom: 0.5rem;">Connection Error</h3>
-                    <p style="color: #64748b; margin-bottom: 2rem;">${message}</p>
-                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                        <button onclick="init()" class="btn btn-primary">
-                            <i class="fas fa-refresh"></i>
-                            Retry Connection
-                        </button>
-                        <button onclick="loadSampleData(); document.getElementById('tokensContainer').innerHTML = ''; renderTokens();" class="btn btn-secondary">
-                            <i class="fas fa-eye"></i>
-                            View Sample Data
-                        </button>
-                    </div>
-                    <div style="margin-top: 2rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; max-width: 600px; margin-left: auto; margin-right: auto;">
-                        <h4 style="color: #3b82f6; margin-bottom: 0.5rem;">
-                            <i class="fas fa-info-circle"></i>
-                            Troubleshooting
-                        </h4>
-                        <ul style="color: #94a3b8; text-align: left; margin: 0; padding-left: 1.5rem;">
-                            <li>Make sure you're connected to Monad Testnet</li>
-                            <li>Check your wallet connection</li>
-                            <li>Verify the contract address: ${CONTRACT_ADDRESS}</li>
-                            <li>Try refreshing the page</li>
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Add refresh functionality
-        function refreshData() {
-            console.log('Refreshing data...');
-            document.getElementById('tokensContainer').innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                </div>
-            `;
-            
-            // Reset data
-            allTokens = [];
-            filteredTokens = [];
-            
-            // Reinitialize
-            setTimeout(() => {
-                init();
-            }, 500);
-        }
-
-        // Add periodic refresh (every 30 seconds)
-        setInterval(() => {
-            if (allTokens.length > 0 && contract) {
-                console.log('Auto-refreshing data...');
-                loadTokens().catch(console.error);
-            }
-        }, 30000);
-
-        // Initialize the application
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM Content Loaded - Starting Monscription Indexer...');
-            
-            if (typeof AOS !== 'undefined') {
-                AOS.init({
-                    duration: 800,
-                    once: true,
-                    offset: 100
-                });
-                console.log('AOS initialized');
-            }
-            
-            // Add loading state to container
-            const container = document.getElementById('tokensContainer');
-            container.innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p style="margin-top: 1rem; color: #94a3b8;">Connecting to Monad Network...</p>
-                </div>
-            `;
-            
-            // Initialize the application with delay
-            setTimeout(() => {
-                init();
-            }, 1000);
+    async function openModal(tick){
+      $('#modalTick').textContent = tick;
+      $('#modalInfo').innerHTML = 'Loading…';
+      $('#modalHolders').innerHTML = '';
+      detailModal.showModal();
+      try{
+        const c = state.contract;
+        const info = await c.getTokenInfo(tick);
+        const minted = info.minted.toString();
+        const maxSupply = info.maxSupply.toString();
+        const holdersCount = info.holdersCount.toString();
+        const deployer = info.deployer;
+        $('#modalInfo').innerHTML = `
+          <div>Max Supply: <b>${fmt(maxSupply)}</b></div>
+          <div>Limit / Mint: <b>${fmt(info.limitPerMint.toString())}</b></div>
+          <div>Minted: <b>${fmt(minted)}</b></div>
+          <div>Holders: <b>${fmt(holdersCount)}</b></div>
+          <div>Deployer: <a class='underline decoration-dotted' target='_blank' href='https://explorer.monad.xyz/address/${deployer}'>${shortAddr(deployer)}</a></div>
+        `;
+        let holders = [];
+        try { holders = await c.getHolders(tick); } catch(e){ console.warn('getHolders failed', e); }
+        const list = $('#modalHolders');
+        holders.slice(0,100).forEach((h,i)=>{
+          const li = document.createElement('li');
+          li.innerHTML = `<a class='underline' target='_blank' href='https://explorer.monad.xyz/address/${h}'>${h}</a>`;
+          list.appendChild(li);
         });
+        if (!holders.length){ list.innerHTML = '<div class="text-slate-500">Tidak ada data holders (belum ada mint / RPC membatasi).</div>'; }
+      }catch(err){
+        console.error(err);
+        $('#modalInfo').innerHTML = '<span class="text-red-400">Gagal memuat detail.</span>';
+      }
+    }
+    function closeModal(){ detailModal.close(); }
 
-        // Add window load event for additional initialization
-        window.addEventListener('load', function() {
-            console.log('Window loaded');
-            
-            // Check if Web3 is available
-            if (typeof Web3 === 'undefined') {
-                console.error('Web3 not loaded');
-                showError('Web3 library failed to load. Please refresh the page.');
-                return;
-            }
-            
-            console.log('Web3 is available:', typeof Web3);
-        });
+    // ====== INDEXER CORE ======
+    async function initProviders(){
+      state.readonlyProvider = new ethers.providers.JsonRpcProvider(RPC_URL);
+      state.provider = state.readonlyProvider;
+      state.contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, state.provider);
+    }
 
-        // Handle network changes
-        if (typeof window.ethereum !== 'undefined') {
-            window.ethereum.on('chainChanged', (chainId) => {
-                console.log('Chain changed to:', chainId);
-                const targetChainId = '0x' + CHAIN_ID.toString(16);
-                if (chainId === targetChainId) {
-                    console.log('Connected to correct network, refreshing data...');
-                    refreshData();
-                } else {
-                    console.log('Wrong network detected');
-                }
-            });
-
-            window.ethereum.on('accountsChanged', (accounts) => {
-                console.log('Accounts changed:', accounts);
-                if (accounts.length > 0) {
-                    userAccount = accounts[0];
-                    updateWalletUI();
-                    refreshData();
-                } else {
-                    userAccount = null;
-                    const btn = document.querySelector('.connect-wallet');
-                    btn.textContent = 'Connect Wallet';
-                    btn.classList.remove('connected');
-                }
-            });
-        }rem 0;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #ef4444; margin-bottom: 1rem;"></i>
-                    <h3 style="color: #ef4444; margin-bottom: 0.5rem;">Error</h3>
-                    <p style="color: #64748b;">${message}</p>
-                    <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1rem;">
-                        <i class="fas fa-refresh"></i>
-                        Retry
-                    </button>
-                </div>
-            `;
+    async function connectWallet(){
+      if (!window.ethereum){ alert('Wallet tidak ditemukan. Install MetaMask/Frame.'); return; }
+      const [acc] = await window.ethereum.request({ method:'eth_requestAccounts' });
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+      const net = await web3Provider.getNetwork();
+      if (Number(net.chainId) !== CHAIN_ID){
+        try{
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x'+CHAIN_ID.toString(16) }]
+          });
+        }catch(switchErr){
+          if (switchErr.code === 4902){
+            await window.ethereum.request({ method:'wallet_addEthereumChain', params:[{
+              chainId: '0x'+CHAIN_ID.toString(16),
+              chainName: 'Monad Testnet',
+              rpcUrls: [RPC_URL],
+              nativeCurrency: { name:'tMON', symbol:'tMON', decimals:18 },
+              blockExplorerUrls: ['https://explorer.monad.xyz']
+            }]});
+          } else { throw switchErr; }
         }
+      }
+      state.provider = web3Provider;
+      state.signer = web3Provider.getSigner();
+      state.contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, state.provider);
+      $('#connectBtn').textContent = shortAddr(acc);
+    }
 
-        // Initialize the application
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM Content Loaded - Starting Monscription Indexer...');
-            
-            if (typeof AOS !== 'undefined') {
-                AOS.init({
-                    duration: 800,
-                    once: true,
-                    offset: 100
-                });
-                console.log('AOS initialized');
-            }
-            
-            // Add loading state to container
-            const container = document.getElementById('tokensContainer');
-            container.innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p style="margin-top: 1rem; color: #94a3b8;">Connecting to Monad Network...</p>
-                </div>
-            `;
-            
-            // Initialize the application with delay
-            setTimeout(() => {
-                init();
-            }, 1000);
+    async function getLatestBlock(){
+      state.latestBlock = await state.provider.getBlockNumber();
+      $('#blockHeight').textContent = '#'+fmt(state.latestBlock);
+      return state.latestBlock;
+    }
+
+    async function scanDeploys(from, to){
+      const c = state.contract;
+      const chunk = 5000; // adjust if RPC limited
+      const iface = c.interface;
+      const filter = c.filters.Deploy();
+      const found = new Map(); // tick -> token object
+      for (let start = from; start <= to; start += chunk+1){
+        const end = Math.min(to, start + chunk);
+        const logs = await c.queryFilter(filter, start, end);
+        logs.forEach(l => {
+          const parsed = iface.parseLog(l);
+          const tick = parsed.args.tick;
+          found.set(tick, { tick, maxSupply: parsed.args.maxSupply.toString(), limitPerMint: parsed.args.limitPerMint.toString(), deployer: parsed.args.deployer, deployedAt: l.blockNumber });
         });
+      }
+      return Array.from(found.values());
+    }
 
-        // Add window load event for additional initialization
-        window.addEventListener('load', function() {
-            console.log('Window loaded');
-            
-            // Check if Web3 is available
-            if (typeof Web3 === 'undefined') {
-                console.error('Web3 not loaded');
-                showError('Web3 library failed to load. Please refresh the page.');
-                return;
-            }
-            
-            console.log('Web3 is available:', typeof Web3);
-        });
+    async function enrichToken(t){
+      try{
+        const info = await state.contract.getTokenInfo(t.tick);
+        t.maxSupply = info.maxSupply.toString();
+        t.limitPerMint = info.limitPerMint.toString();
+        t.minted = info.minted.toString();
+        t.deployer = info.deployer;
+        t.holdersCount = info.holdersCount.toString();
+      }catch(e){ console.warn('getTokenInfo fail', t.tick, e); }
+      return t;
+    }
 
-        // Handle network changes
-        if (typeof window.ethereum !== 'undefined') {
-            window.ethereum.on('chainChanged', (chainId) => {
-                console.log('Chain changed to:', chainId);
-                const targetChainId = '0x' + CHAIN_ID.toString(16);
-                if (chainId === targetChainId) {
-                    console.log('Connected to correct network, refreshing data...');
-                    refreshData();
-                } else {
-                    console.log('Wrong network detected');
-                }
-            });
-
-            window.ethereum.on('accountsChanged', (accounts) => {
-                console.log('Accounts changed:', accounts);
-                if (accounts.length > 0) {
-                    userAccount = accounts[0];
-                    updateWalletUI();
-                    refreshData();
-                } else {
-                    userAccount = null;
-                    const btn = document.querySelector('.connect-wallet');
-                    btn.textContent = 'Connect Wallet';
-                    btn.classList.remove('connected');
-                }
-            });
+    async function scanInscribes(from, to){
+      const c = state.contract;
+      const chunk = 5000;
+      const iface = c.interface;
+      const filter = c.filters.Inscribe();
+      const events = [];
+      for (let start = from; start <= to; start += chunk+1){
+        const end = Math.min(to, start + chunk);
+        const logs = await c.queryFilter(filter, start, end);
+        for (const l of logs){
+          const p = iface.parseLog(l);
+          const block = await state.provider.getBlock(l.blockNumber);
+          events.push({
+            blockNumber: l.blockNumber,
+            user: p.args.user,
+            tick: p.args.tick,
+            operation: p.args.operation,
+            amount: p.args.amount.toString(),
+            data: p.args.data,
+            inscriptionNumber: p.args.inscriptionNumber.toString(),
+            time: block.timestamp
+          });
         }
-    </script>
+      }
+      events.sort((a,b)=>b.blockNumber - a.blockNumber);
+      return events;
+    }
+
+    async function rescan(){
+      try{
+        const latest = await getLatestBlock();
+        const from = Number($('#fromBlock').value || 0);
+        const to = Number($('#toBlock').value || latest);
+        $('#tokenTbody').innerHTML = rowSkeleton()+rowSkeleton()+rowSkeleton();
+        // Scan
+        const baseTokens = await scanDeploys(from, to);
+        // Always include MONS if deployed but not captured (fallback via tokens mapping)
+        try {
+          if (!baseTokens.find(t=>t.tick==='MONS')){
+            const tk = await state.contract.tokens('MONS');
+            if (tk && tk.exists){ baseTokens.push({ tick:'MONS', maxSupply: tk.maxSupply.toString(), limitPerMint: tk.limitPerMint.toString(), deployer: tk.deployer, deployedAt: tk.deployedAt.toNumber?.() || tk.deployedAt }); }
+          }
+        }catch(e){ /* ignore */ }
+        // Enrich
+        const enriched = [];
+        for (const t of baseTokens){
+          enriched.push(await enrichToken(t));
+        }
+        // Sort by deployedAt desc
+        enriched.sort((a,b)=> (b.deployedAt||0) - (a.deployedAt||0));
+        state.tokens = enriched;
+        renderTokens();
+        // Inscribes
+        state.inscribes = await scanInscribes(from, to);
+        renderInscribe();
+        state.lastScannedBlock = to;
+      }catch(err){
+        console.error(err);
+        alert('Rescan gagal: '+(err?.message||err));
+      }
+    }
+
+    async function liveSubscribe(){
+      // Update latest block indicator
+      state.provider.on('block', async (bn)=>{
+        state.latestBlock = bn;
+        $('#blockHeight').textContent = '#'+fmt(bn);
+      });
+      // Live Deploy
+      state.contract.on('Deploy', async (tick, maxSupply, limitPerMint, deployer, ev)=>{
+        const t = await enrichToken({ tick, maxSupply: maxSupply.toString(), limitPerMint: limitPerMint.toString(), deployer, deployedAt: ev.blockNumber, minted:'0', holdersCount:'0' });
+        // Deduplicate
+        const i = state.tokens.findIndex(x=>x.tick===t.tick);
+        if (i>=0) state.tokens[i]=t; else state.tokens.unshift(t);
+        renderTokens();
+      });
+      // Live Inscribe
+      state.contract.on('Inscribe', async (user, tick, operation, amount, data, inscriptionNumber, ev)=>{
+        try{
+          const block = await state.provider.getBlock(ev.blockNumber);
+          state.inscribes.unshift({ blockNumber: ev.blockNumber, user, tick, operation, amount: amount.toString(), data, inscriptionNumber: inscriptionNumber.toString(), time: block.timestamp });
+          renderInscribe();
+          // Also refresh the token row minted + holders
+          const idx = state.tokens.findIndex(t=>t.tick===tick);
+          if (idx>=0){
+            try{
+              const info = await state.contract.getTokenInfo(tick);
+              state.tokens[idx].minted = info.minted.toString();
+              state.tokens[idx].holdersCount = info.holdersCount.toString();
+              renderTokens();
+            }catch(e){}
+          }
+        }catch(e){ console.warn('live inscribe enrich failed', e); }
+      });
+    }
+
+    // ====== EXPORT SNAPSHOT ======
+    function exportSnapshot(){
+      return {
+        contract: CONTRACT_ADDRESS,
+        chainId: CHAIN_ID,
+        rpc: RPC_URL,
+        block: state.latestBlock,
+        tokens: state.tokens,
+        inscribes: state.inscribes.slice(0,1000)
+      };
+    }
+
+    // ====== BOOT ======
+    async function boot(){
+      setExplorerLinks();
+      $('#year').textContent = new Date().getFullYear();
+      lucide.createIcons();
+      await initProviders();
+      await getLatestBlock();
+      await rescan();
+      liveSubscribe();
+    }
+
+    // ====== EVENTS ======
+    $('#rescanBtn').addEventListener('click', rescan);
+    $('#searchInput').addEventListener('input', renderTokens);
+    $('#connectBtn').addEventListener('click', connectWallet);
+    $('#exportCsv').addEventListener('click', ()=>{
+      if (!state.tokens.length) return alert('Tidak ada data.');
+      const csv = toCSV(state.tokens);
+      download('monscription_tokens.csv', csv);
+    });
+    $('#exportJson').addEventListener('click', ()=>{
+      const json = JSON.stringify(exportSnapshot(), null, 2);
+      download('monscription_snapshot.json', json);
+    });
+    $('#copyJson').addEventListener('click', ()=>{
+      navigator.clipboard.writeText(JSON.stringify(exportSnapshot()));
+      alert('Snapshot disalin ke clipboard.');
+    });
+
+    // Start
+    boot();
+  </script>
 </body>
 </html>
-
-        // Add modal styles
-        const modalStyles = `
-            .modal {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 1000;
-                opacity: 0;
-                animation: modalFadeIn 0.3s ease forwards;
-            }
-            
-            @keyframes modalFadeIn {
-                to { opacity: 1; }
-            }
-            
-            .modal-content {
-                background: rgba(15, 23, 42, 0.95);
-                backdrop-filter: blur(20px);
-                border: 1px solid rgba(59, 130, 246, 0.2);
-                border-radius: 20px;
-                max-width: 600px;
-                width: 90%;
-                max-height: 80vh;
-                overflow-y: auto;
-                transform: scale(0.9);
-                animation: modalScaleIn 0.3s ease forwards;
-            }
-            
-            @keyframes modalScaleIn {
-                to { transform: scale(1); }
-            }
-            
-            .modal-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 2rem 2rem 1rem;
-                border-bottom: 1px solid rgba(59, 130, 246, 0.1);
-            }
-            
-            .modal-header h2 {
-                color: #3b82f6;
-                margin: 0;
-            }
-            
-            .modal-close {
-                background: none;
-                border: none;
-                color: #94a3b8;
-                font-size: 1.5rem;
-                cursor: pointer;
-                padding: 0.5rem;
-                border-radius: 8px;
-                transition: all 0.3s ease;
-            }
-            
-            .modal-close:hover {
-                background: rgba(239, 68, 68, 0.1);
-                color: #ef4444;
-            }
-            
-            .modal-body {
-                padding: 2rem;
-            }
-            
-            .detail-grid {
-                display: grid;
-                gap: 1rem;
-                margin-bottom: 2rem;
-            }
-            
-            .detail-item {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 1rem;
-                background: rgba(71, 85, 105, 0.1);
-                border-radius: 12px;
-                border: 1px solid rgba(71, 85, 105, 0.2);
-            }
-            
-            .detail-label {
-                color: #94a3b8;
-                font-weight: 500;
-            }
-            
-            .detail-value {
-                color: white;
-                font-weight: 600;
-            }
-            
-            .detail-value a {
-                color: #3b82f6;
-                text-decoration: none;
-                font-family: monospace;
-            }
-            
-            .detail-value a:hover {
-                text-decoration: underline;
-            }
-            
-            .holders-section {
-                margin-top: 2rem;
-            }
-            
-            .holders-section h3 {
-                color: #3b82f6;
-                margin-bottom: 1rem;
-            }
-            
-            .holders-list {
-                display: grid;
-                gap: 0.5rem;
-            }
-            
-            .holder-item {
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                padding: 0.75rem;
-                background: rgba(71, 85, 105, 0.1);
-                border-radius: 8px;
-                border: 1px solid rgba(71, 85, 105, 0.2);
-            }
-            
-            .holder-rank {
-                color: #8b5cf6;
-                font-weight: 600;
-                min-width: 30px;
-            }
-            
-            .holder-address a {
-                color: #3b82f6;
-                text-decoration: none;
-                font-family: monospace;
-            }
-            
-            .holder-address a:hover {
-                text-decoration: underline;
-            }
-        `;
-        
-        const style = document.createElement('style');
-        style.textContent = modalStyles;
-        document.head.appendChild(style);
-    </script>
-</body>
-</html>",
-                        "type": "string"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "maxSupply",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "limitPerMint",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "deployToken",
-                "outputs": [],
-                "stateMutability": "payable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "address",
-                        "name": "token",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "amount",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "emergencyWithdraw",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    {
-                        "indexed": true,
-                        "internalType": "address",
-                        "name": "user",
-                        "type": "address"
-                    },
-                    {
-                        "indexed": true,
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    },
-                    {
-                        "indexed": false,
-                        "internalType": "string",
-                        "name": "operation",
-                        "type": "string"
-                    },
-                    {
-                        "indexed": false,
-                        "internalType": "uint256",
-                        "name": "amount",
-                        "type": "uint256"
-                    },
-                    {
-                        "indexed": false,
-                        "internalType": "string",
-                        "name": "data",
-                        "type": "string"
-                    },
-                    {
-                        "indexed": false,
-                        "internalType": "uint256",
-                        "name": "inscriptionNumber",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "Inscribe",
-                "type": "event"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "amount",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "mint",
-                "outputs": [],
-                "stateMutability": "payable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "newFee",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "setDeployFee",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "newFee",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "setMintFee",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "address",
-                        "name": "to",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "amount",
-                        "type": "uint256"
-                    }
-                ],
-                "name": "transfer",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "withdraw",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "stateMutability": "payable",
-                "type": "receive"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "address",
-                        "name": "",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "string",
-                        "name": "",
-                        "type": "string"
-                    }
-                ],
-                "name": "balances",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "deployFee",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "address",
-                        "name": "user",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    }
-                ],
-                "name": "getBalance",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    }
-                ],
-                "name": "getHolders",
-                "outputs": [
-                    {
-                        "internalType": "address[]",
-                        "name": "",
-                        "type": "address[]"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "tick",
-                        "type": "string"
-                    }
-                ],
-                "name": "getHoldersCount",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [
-                    {
-                        "internalType": "string",
-                        "name": "tick
