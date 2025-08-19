@@ -36,6 +36,10 @@
     /* Tooltip */
     .tooltip { position:relative }
     .tooltip:hover::after { content: attr(data-tip); position:absolute; top: -38px; left:50%; transform:translateX(-50%); white-space:nowrap; padding:6px 10px; background:#111827; border:1px solid rgba(255,255,255,.08); border-radius:10px; font-size:12px; color:#e5e7eb }
+    /* Rescan progress */
+    #rescanProgressWrap { display: none }
+    #rescanProgressBar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow:hidden }
+    #rescanProgressBar > div { height: 100%; width: 0%; transition: width .2s linear; background: linear-gradient(90deg,#06b6d4,#3b82f6) }
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black text-slate-200">
@@ -105,12 +109,25 @@
     <!-- Tokens -->
     <section class="lg:col-span-2 card glass p-0 overflow-hidden">
       <div class="p-4 flex items-center justify-between border-b border-white/10">
-        <h2 class="text-lg font-semibold">Tokens Terindeks</h2>
+        <div>
+          <h2 class="text-lg font-semibold">Tokens Terindeks</h2>
+          <div class="text-xs text-slate-400">Indexer akan memindai event Deploy & Inscribe dari kontrak Monscription</div>
+        </div>
         <div class="flex gap-2 text-xs text-slate-400">
           <span id="tokenCount">0</span>
           <span>items</span>
         </div>
       </div>
+
+      <!-- Rescan progress (hidden until rescan starts) -->
+      <div id="rescanProgressWrap" class="p-3 border-b border-white/5">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-xs text-slate-400" id="rescanProgressText">Preparing…</div>
+          <div class="text-xs text-slate-400" id="rescanProgressPct">0%</div>
+        </div>
+        <div id="rescanProgressBar"><div></div></div>
+      </div>
+
       <div class="overflow-auto">
         <table class="w-full table-fixed">
           <thead class="text-slate-400 text-xs uppercase">
@@ -264,6 +281,23 @@
       return lines.join('\n');
     }
 
+    // ====== PROGRESS UI ======
+    function showRescanProgress(){
+      $('#rescanProgressWrap').style.display = 'block';
+      $('#rescanProgressPct').textContent = '0%';
+      $('#rescanProgressText').textContent = 'Starting rescan…';
+      $('#rescanProgressBar > div').style.width = '0%';
+    }
+    function updateRescanProgress(done, total){
+      const pct = total > 0 ? Math.round((done/total)*100) : 0;
+      $('#rescanProgressPct').textContent = pct + '%';
+      $('#rescanProgressText').textContent = `Processing ${done} / ${total} blocks`;
+      $('#rescanProgressBar > div').style.width = pct + '%';
+    }
+    function hideRescanProgress(){
+      $('#rescanProgressWrap').style.display = 'none';
+    }
+
     // ====== RENDER ======
     function renderTokens(){
       const q = ($('#searchInput').value||'').toLowerCase().trim();
@@ -393,20 +427,58 @@
       return state.latestBlock;
     }
 
+    /**
+     * Fetch logs in batches to avoid RPC limits (Monad testnet limits eth_getLogs to small ranges)
+     * filterObj should be a standard ethers filter (address + topics)
+     */
+    async function fetchLogsInBatches(filterObj, fromBlock, toBlock, batchSize = 100, onProgress){
+      const provider = state.provider;
+      const totalBlocks = Math.max(0, toBlock - fromBlock + 1);
+      let processedBlocks = 0;
+      const allLogs = [];
+
+      // defensive: ensure integers
+      fromBlock = Number(fromBlock);
+      toBlock = Number(toBlock);
+
+      for (let start = fromBlock; start <= toBlock; start += batchSize){
+        let end = Math.min(toBlock, start + batchSize - 1);
+        try{
+          const logs = await provider.getLogs({ ...filterObj, fromBlock: start, toBlock: end });
+          allLogs.push(...logs);
+        }catch(err){
+          const msg = String(err?.message || err);
+          console.warn('batch failed', start, end, msg);
+          // If RPC complains about range, reduce batch and retry this range recursively with half-size
+          if (batchSize > 1 && /limited to|range/i.test(msg)){
+            const half = Math.max(1, Math.floor(batchSize/2));
+            const nested = await fetchLogsInBatches(filterObj, start, end, half, onProgress);
+            allLogs.push(...nested);
+          } else {
+            // Non-recoverable — rethrow to let caller handle
+            throw err;
+          }
+        }
+        processedBlocks += (end - start + 1);
+        if (typeof onProgress === 'function') onProgress(processedBlocks, totalBlocks);
+        // small delay to avoid hitting rate limits
+        await new Promise(r => setTimeout(r, 120));
+      }
+      return allLogs;
+    }
+
     async function scanDeploys(from, to){
       const c = state.contract;
-      const chunk = 5000; // adjust if RPC limited
       const iface = c.interface;
       const filter = c.filters.Deploy();
-      const found = new Map(); // tick -> token object
-      for (let start = from; start <= to; start += chunk+1){
-        const end = Math.min(to, start + chunk);
-        const logs = await c.queryFilter(filter, start, end);
-        logs.forEach(l => {
+      const logs = await fetchLogsInBatches(filter, from, to, 100, updateRescanProgress);
+      const found = new Map();
+      for (const l of logs){
+        try{
           const parsed = iface.parseLog(l);
           const tick = parsed.args.tick;
           found.set(tick, { tick, maxSupply: parsed.args.maxSupply.toString(), limitPerMint: parsed.args.limitPerMint.toString(), deployer: parsed.args.deployer, deployedAt: l.blockNumber });
-        });
+        }catch(e){ console.warn('parse deploy log failed', e); }
       }
       return Array.from(found.values());
     }
@@ -425,16 +497,16 @@
 
     async function scanInscribes(from, to){
       const c = state.contract;
-      const chunk = 5000;
       const iface = c.interface;
       const filter = c.filters.Inscribe();
+      const logs = await fetchLogsInBatches(filter, from, to, 100, updateRescanProgress);
       const events = [];
-      for (let start = from; start <= to; start += chunk+1){
-        const end = Math.min(to, start + chunk);
-        const logs = await c.queryFilter(filter, start, end);
-        for (const l of logs){
+      for (const l of logs){
+        try{
           const p = iface.parseLog(l);
-          const block = await state.provider.getBlock(l.blockNumber);
+          // get block timestamp (may be multiple calls)
+          let block;
+          try { block = await state.provider.getBlock(l.blockNumber); } catch(e){ block = { timestamp: Math.floor(Date.now()/1000) }; }
           events.push({
             blockNumber: l.blockNumber,
             user: p.args.user,
@@ -445,7 +517,7 @@
             inscriptionNumber: p.args.inscriptionNumber.toString(),
             time: block.timestamp
           });
-        }
+        }catch(e){ console.warn('parse inscribe log failed', e); }
       }
       events.sort((a,b)=>b.blockNumber - a.blockNumber);
       return events;
@@ -454,33 +526,44 @@
     async function rescan(){
       try{
         const latest = await getLatestBlock();
-        const from = Number($('#fromBlock').value || 0);
-        const to = Number($('#toBlock').value || latest);
+        let from = Number($('#fromBlock').value || 0);
+        let to = Number($('#toBlock').value || latest);
+        if (from > to) { const tmp = from; from = to; to = tmp; }
+
+        // show skeleton and progress UI
         $('#tokenTbody').innerHTML = rowSkeleton()+rowSkeleton()+rowSkeleton();
-        // Scan
+        showRescanProgress();
+        updateRescanProgress(0, Math.max(0, to - from + 1));
+
+        // Scan Deploy events (batched)
         const baseTokens = await scanDeploys(from, to);
-        // Always include MONS if deployed but not captured (fallback via tokens mapping)
+
+        // Ensure MONS exists if present in mapping
         try {
           if (!baseTokens.find(t=>t.tick==='MONS')){
             const tk = await state.contract.tokens('MONS');
             if (tk && tk.exists){ baseTokens.push({ tick:'MONS', maxSupply: tk.maxSupply.toString(), limitPerMint: tk.limitPerMint.toString(), deployer: tk.deployer, deployedAt: tk.deployedAt.toNumber?.() || tk.deployedAt }); }
           }
-        }catch(e){ /* ignore */ }
-        // Enrich
+        }catch(e){ console.warn('tokens("MONS") fallback failed', e); }
+
+        // Enrich tokens (sequentially)
         const enriched = [];
         for (const t of baseTokens){
           enriched.push(await enrichToken(t));
         }
-        // Sort by deployedAt desc
         enriched.sort((a,b)=> (b.deployedAt||0) - (a.deployedAt||0));
         state.tokens = enriched;
         renderTokens();
-        // Inscribes
+
+        // Scan Inscribe events (batched)
         state.inscribes = await scanInscribes(from, to);
         renderInscribe();
+
         state.lastScannedBlock = to;
+        hideRescanProgress();
       }catch(err){
         console.error(err);
+        hideRescanProgress();
         alert('Rescan gagal: '+(err?.message||err));
       }
     }
@@ -494,7 +577,6 @@
       // Live Deploy
       state.contract.on('Deploy', async (tick, maxSupply, limitPerMint, deployer, ev)=>{
         const t = await enrichToken({ tick, maxSupply: maxSupply.toString(), limitPerMint: limitPerMint.toString(), deployer, deployedAt: ev.blockNumber, minted:'0', holdersCount:'0' });
-        // Deduplicate
         const i = state.tokens.findIndex(x=>x.tick===t.tick);
         if (i>=0) state.tokens[i]=t; else state.tokens.unshift(t);
         renderTokens();
@@ -513,7 +595,7 @@
               state.tokens[idx].minted = info.minted.toString();
               state.tokens[idx].holdersCount = info.holdersCount.toString();
               renderTokens();
-            }catch(e){}
+            }catch(e){ console.warn('refresh token after inscribe failed', e); }
           }
         }catch(e){ console.warn('live inscribe enrich failed', e); }
       });
