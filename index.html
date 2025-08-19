@@ -953,66 +953,136 @@
 
         // Initialize the application
         async function init() {
+            console.log('Initializing Monscription Indexer...');
+            
             try {
                 // Initialize Web3 with RPC
                 web3 = new Web3(RPC_URL);
                 contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
                 
+                // Test connection first
+                const isConnected = await testConnection();
+                if (!isConnected) {
+                    throw new Error('Failed to connect to Monad network');
+                }
+                
                 // Start loading data
+                console.log('Loading contract data...');
                 await loadContractData();
+                
+                console.log('Loading tokens...');
                 await loadTokens();
                 
                 // Setup search functionality
                 setupSearch();
                 
+                console.log('Initialization complete!');
+                
             } catch (error) {
                 console.error('Initialization error:', error);
-                showError('Failed to initialize application');
+                showError(`Failed to initialize application: ${error.message}`);
+                
+                // Try to load sample data as fallback
+                loadSampleData();
             }
         }
 
-        // Connect wallet functionality
+        // Test connection to the network
+        async function testConnection() {
+            try {
+                console.log('Testing connection to Monad network...');
+                const blockNumber = await web3.eth.getBlockNumber();
+                console.log('Current block number:', blockNumber);
+                
+                const contractCode = await web3.eth.getCode(CONTRACT_ADDRESS);
+                if (contractCode === '0x') {
+                    throw new Error('Contract not found at the specified address');
+                }
+                console.log('Contract found and verified');
+                
+                return true;
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                return false;
+            }
+        }
+
+        // Connect wallet functionality with better error handling
         async function connectWallet() {
+            console.log('Attempting to connect wallet...');
+            
             if (typeof window.ethereum !== 'undefined') {
                 try {
+                    // Request account access
                     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                     userAccount = accounts[0];
+                    console.log('Connected account:', userAccount);
                     
-                    // Switch to Monad Testnet
-                    try {
-                        await window.ethereum.request({
-                            method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: '0x' + CHAIN_ID.toString(16) }],
-                        });
-                    } catch (switchError) {
-                        if (switchError.code === 4902) {
+                    // Check current chain
+                    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    const targetChainId = '0x' + CHAIN_ID.toString(16);
+                    
+                    console.log('Current chain ID:', currentChainId);
+                    console.log('Target chain ID:', targetChainId);
+                    
+                    if (currentChainId !== targetChainId) {
+                        try {
+                            // Try to switch to Monad Testnet
                             await window.ethereum.request({
-                                method: 'wallet_addEthereumChain',
-                                params: [{
-                                    chainId: '0x' + CHAIN_ID.toString(16),
-                                    chainName: 'Monad Testnet',
-                                    nativeCurrency: {
-                                        name: 'MON',
-                                        symbol: 'MON',
-                                        decimals: 18
-                                    },
-                                    rpcUrls: [RPC_URL],
-                                    blockExplorerUrls: ['https://explorer.testnet.monad.xyz/']
-                                }]
+                                method: 'wallet_switchEthereumChain',
+                                params: [{ chainId: targetChainId }],
                             });
+                            console.log('Switched to Monad Testnet');
+                        } catch (switchError) {
+                            console.log('Switch error:', switchError);
+                            // This error code indicates that the chain has not been added to MetaMask
+                            if (switchError.code === 4902) {
+                                try {
+                                    await window.ethereum.request({
+                                        method: 'wallet_addEthereumChain',
+                                        params: [{
+                                            chainId: targetChainId,
+                                            chainName: 'Monad Testnet',
+                                            nativeCurrency: {
+                                                name: 'MON',
+                                                symbol: 'MON',
+                                                decimals: 18
+                                            },
+                                            rpcUrls: [RPC_URL],
+                                            blockExplorerUrls: ['https://explorer.testnet.monad.xyz/']
+                                        }]
+                                    });
+                                    console.log('Added Monad Testnet to wallet');
+                                } catch (addError) {
+                                    console.error('Failed to add network:', addError);
+                                    alert('Failed to add Monad Testnet. Please add it manually.');
+                                    return;
+                                }
+                            } else {
+                                console.error('Failed to switch network:', switchError);
+                                alert('Please switch to Monad Testnet manually');
+                                return;
+                            }
                         }
                     }
                     
                     updateWalletUI();
+                    
+                    // Reinitialize Web3 with user's provider
                     web3 = new Web3(window.ethereum);
                     contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
                     
+                    // Reload data with user's connection
+                    console.log('Reloading data with wallet connection...');
+                    await loadContractData();
+                    await loadTokens();
+                    
                 } catch (error) {
                     console.error('Wallet connection error:', error);
-                    alert('Failed to connect wallet');
+                    alert('Failed to connect wallet: ' + error.message);
                 }
             } else {
-                alert('Please install MetaMask or another Web3 wallet');
+                alert('Please install MetaMask or another Web3 wallet to connect');
             }
         }
 
@@ -1028,8 +1098,15 @@
         // Load contract data
         async function loadContractData() {
             try {
-                // Get inscription counter
-                const inscriptionCount = await contract.methods.inscriptionCounter().call();
+                console.log('Fetching inscription counter...');
+                
+                // Get inscription counter with timeout
+                const inscriptionCount = await Promise.race([
+                    contract.methods.inscriptionCounter().call(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
+                ]);
+                
+                console.log('Inscription count:', inscriptionCount);
                 document.getElementById('totalInscriptions').textContent = formatNumber(inscriptionCount);
                 
                 // Animation for numbers
@@ -1037,50 +1114,159 @@
                 
             } catch (error) {
                 console.error('Error loading contract data:', error);
+                // Set default value
+                document.getElementById('totalInscriptions').textContent = '0';
             }
         }
 
-        // Load tokens from events
+        // Load tokens from events with better error handling
         async function loadTokens() {
             try {
-                // Get deploy events to find all tokens
-                const deployEvents = await contract.getPastEvents('Deploy', {
-                    fromBlock: 0,
-                    toBlock: 'latest'
-                });
+                console.log('Fetching deploy events...');
+                
+                // Try to get recent events first (last 1000 blocks)
+                let deployEvents = [];
+                
+                try {
+                    const currentBlock = await web3.eth.getBlockNumber();
+                    const fromBlock = Math.max(0, currentBlock - 1000);
+                    
+                    deployEvents = await contract.getPastEvents('Deploy', {
+                        fromBlock: fromBlock,
+                        toBlock: 'latest'
+                    });
+                    
+                    console.log(`Found ${deployEvents.length} deploy events in recent blocks`);
+                    
+                    // If no recent events, try from beginning (with limit)
+                    if (deployEvents.length === 0) {
+                        deployEvents = await contract.getPastEvents('Deploy', {
+                            fromBlock: 0,
+                            toBlock: 'latest'
+                        });
+                        console.log(`Found ${deployEvents.length} total deploy events`);
+                    }
+                    
+                } catch (eventError) {
+                    console.error('Error fetching events:', eventError);
+                    // Fallback: try to get MONS token data directly
+                    console.log('Trying to get MONS token directly...');
+                    const monsData = await getTokenData('MONS');
+                    if (monsData) {
+                        allTokens = [monsData];
+                        console.log('Successfully loaded MONS token data');
+                    }
+                }
 
-                const tokenPromises = deployEvents.map(async (event) => {
-                    const tick = event.returnValues.tick;
-                    return await getTokenData(tick);
-                });
+                // Process events if we have any
+                if (deployEvents.length > 0) {
+                    console.log('Processing deploy events...');
+                    
+                    const tokenPromises = deployEvents.map(async (event, index) => {
+                        console.log(`Processing token ${index + 1}/${deployEvents.length}: ${event.returnValues.tick}`);
+                        return await getTokenData(event.returnValues.tick);
+                    });
 
-                allTokens = await Promise.all(tokenPromises);
-                allTokens = allTokens.filter(token => token !== null);
+                    const tokenResults = await Promise.allSettled(tokenPromises);
+                    allTokens = tokenResults
+                        .filter(result => result.status === 'fulfilled' && result.value !== null)
+                        .map(result => result.value);
+                        
+                    console.log(`Successfully loaded ${allTokens.length} tokens`);
+                }
+
+                // If still no tokens, add sample data for demonstration
+                if (allTokens.length === 0) {
+                    console.log('No tokens found, loading sample data...');
+                    loadSampleData();
+                    return;
+                }
                 
                 // Update stats
-                document.getElementById('totalTokens').textContent = allTokens.length;
-                animateValue('totalTokens', 0, allTokens.length, 2000);
-                
-                const totalHolders = allTokens.reduce((sum, token) => sum + token.holdersCount, 0);
-                document.getElementById('totalHolders').textContent = formatNumber(totalHolders);
-                animateValue('totalHolders', 0, totalHolders, 2000);
-
+                updateStats();
                 filteredTokens = [...allTokens];
                 renderTokens();
                 
             } catch (error) {
                 console.error('Error loading tokens:', error);
-                showError('Failed to load tokens');
+                showError(`Failed to load tokens: ${error.message}`);
+                loadSampleData();
             }
         }
 
-        // Get token data
+        // Load sample data for demonstration
+        function loadSampleData() {
+            console.log('Loading sample data...');
+            
+            allTokens = [
+                {
+                    tick: 'MONS',
+                    maxSupply: 21000000,
+                    limitPerMint: 1000,
+                    minted: 15750000,
+                    deployer: '0x1234567890123456789012345678901234567890',
+                    holdersCount: 1250,
+                    percentage: 75,
+                    isCompleted: false
+                },
+                {
+                    tick: 'TEST',
+                    maxSupply: 1000000,
+                    limitPerMint: 100,
+                    minted: 1000000,
+                    deployer: '0x0987654321098765432109876543210987654321',
+                    holdersCount: 500,
+                    percentage: 100,
+                    isCompleted: true
+                }
+            ];
+            
+            updateStats();
+            filteredTokens = [...allTokens];
+            renderTokens();
+            
+            // Show info message
+            setTimeout(() => {
+                const container = document.getElementById('tokensContainer');
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'info-banner';
+                infoDiv.innerHTML = `
+                    <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 1rem; margin-bottom: 2rem; text-align: center;">
+                        <i class="fas fa-info-circle" style="color: #3b82f6; margin-right: 0.5rem;"></i>
+                        <span style="color: #3b82f6;">Showing sample data. Connect to Monad network for real-time data.</span>
+                    </div>
+                `;
+                container.insertBefore(infoDiv, container.firstChild);
+            }, 1000);
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalTokens').textContent = allTokens.length;
+            animateValue('totalTokens', 0, allTokens.length, 2000);
+            
+            const totalHolders = allTokens.reduce((sum, token) => sum + token.holdersCount, 0);
+            document.getElementById('totalHolders').textContent = formatNumber(totalHolders);
+            animateValue('totalHolders', 0, totalHolders, 2000);
+        }
+
+        // Get token data with better error handling
         async function getTokenData(tick) {
             try {
-                const tokenInfo = await contract.methods.getTokenInfo(tick).call();
-                const progress = await contract.methods.getMintProgress(tick).call();
+                console.log(`Fetching data for token: ${tick}`);
                 
-                return {
+                // Add timeout to prevent hanging
+                const tokenInfo = await Promise.race([
+                    contract.methods.getTokenInfo(tick).call(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
+                
+                const progress = await Promise.race([
+                    contract.methods.getMintProgress(tick).call(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
+                
+                const tokenData = {
                     tick: tick,
                     maxSupply: parseInt(tokenInfo.maxSupply),
                     limitPerMint: parseInt(tokenInfo.limitPerMint),
@@ -1090,6 +1276,10 @@
                     percentage: parseInt(progress.percentage),
                     isCompleted: parseInt(progress.percentage) >= 100
                 };
+                
+                console.log(`Token ${tick} data:`, tokenData);
+                return tokenData;
+                
             } catch (error) {
                 console.error(`Error getting token data for ${tick}:`, error);
                 return null;
@@ -1300,6 +1490,131 @@
             container.innerHTML = `
                 <div style="text-align: center; grid-column: 1 / -1; padding: 4rem 0;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #ef4444; margin-bottom: 1rem;"></i>
+                    <h3 style="color: #ef4444; margin-bottom: 0.5rem;">Connection Error</h3>
+                    <p style="color: #64748b; margin-bottom: 2rem;">${message}</p>
+                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <button onclick="init()" class="btn btn-primary">
+                            <i class="fas fa-refresh"></i>
+                            Retry Connection
+                        </button>
+                        <button onclick="loadSampleData(); document.getElementById('tokensContainer').innerHTML = ''; renderTokens();" class="btn btn-secondary">
+                            <i class="fas fa-eye"></i>
+                            View Sample Data
+                        </button>
+                    </div>
+                    <div style="margin-top: 2rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                        <h4 style="color: #3b82f6; margin-bottom: 0.5rem;">
+                            <i class="fas fa-info-circle"></i>
+                            Troubleshooting
+                        </h4>
+                        <ul style="color: #94a3b8; text-align: left; margin: 0; padding-left: 1.5rem;">
+                            <li>Make sure you're connected to Monad Testnet</li>
+                            <li>Check your wallet connection</li>
+                            <li>Verify the contract address: ${CONTRACT_ADDRESS}</li>
+                            <li>Try refreshing the page</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add refresh functionality
+        function refreshData() {
+            console.log('Refreshing data...');
+            document.getElementById('tokensContainer').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            `;
+            
+            // Reset data
+            allTokens = [];
+            filteredTokens = [];
+            
+            // Reinitialize
+            setTimeout(() => {
+                init();
+            }, 500);
+        }
+
+        // Add periodic refresh (every 30 seconds)
+        setInterval(() => {
+            if (allTokens.length > 0 && contract) {
+                console.log('Auto-refreshing data...');
+                loadTokens().catch(console.error);
+            }
+        }, 30000);
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded - Starting Monscription Indexer...');
+            
+            if (typeof AOS !== 'undefined') {
+                AOS.init({
+                    duration: 800,
+                    once: true,
+                    offset: 100
+                });
+                console.log('AOS initialized');
+            }
+            
+            // Add loading state to container
+            const container = document.getElementById('tokensContainer');
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 1rem; color: #94a3b8;">Connecting to Monad Network...</p>
+                </div>
+            `;
+            
+            // Initialize the application with delay
+            setTimeout(() => {
+                init();
+            }, 1000);
+        });
+
+        // Add window load event for additional initialization
+        window.addEventListener('load', function() {
+            console.log('Window loaded');
+            
+            // Check if Web3 is available
+            if (typeof Web3 === 'undefined') {
+                console.error('Web3 not loaded');
+                showError('Web3 library failed to load. Please refresh the page.');
+                return;
+            }
+            
+            console.log('Web3 is available:', typeof Web3);
+        });
+
+        // Handle network changes
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('chainChanged', (chainId) => {
+                console.log('Chain changed to:', chainId);
+                const targetChainId = '0x' + CHAIN_ID.toString(16);
+                if (chainId === targetChainId) {
+                    console.log('Connected to correct network, refreshing data...');
+                    refreshData();
+                } else {
+                    console.log('Wrong network detected');
+                }
+            });
+
+            window.ethereum.on('accountsChanged', (accounts) => {
+                console.log('Accounts changed:', accounts);
+                if (accounts.length > 0) {
+                    userAccount = accounts[0];
+                    updateWalletUI();
+                    refreshData();
+                } else {
+                    userAccount = null;
+                    const btn = document.querySelector('.connect-wallet');
+                    btn.textContent = 'Connect Wallet';
+                    btn.classList.remove('connected');
+                }
+            });
+        }rem 0;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #ef4444; margin-bottom: 1rem;"></i>
                     <h3 style="color: #ef4444; margin-bottom: 0.5rem;">Error</h3>
                     <p style="color: #64748b;">${message}</p>
                     <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1rem;">
@@ -1310,19 +1625,78 @@
             `;
         }
 
-        // Initialize AOS (Animate On Scroll)
+        // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded - Starting Monscription Indexer...');
+            
             if (typeof AOS !== 'undefined') {
                 AOS.init({
                     duration: 800,
                     once: true,
                     offset: 100
                 });
+                console.log('AOS initialized');
             }
             
-            // Initialize the application
-            init();
+            // Add loading state to container
+            const container = document.getElementById('tokensContainer');
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 1rem; color: #94a3b8;">Connecting to Monad Network...</p>
+                </div>
+            `;
+            
+            // Initialize the application with delay
+            setTimeout(() => {
+                init();
+            }, 1000);
         });
+
+        // Add window load event for additional initialization
+        window.addEventListener('load', function() {
+            console.log('Window loaded');
+            
+            // Check if Web3 is available
+            if (typeof Web3 === 'undefined') {
+                console.error('Web3 not loaded');
+                showError('Web3 library failed to load. Please refresh the page.');
+                return;
+            }
+            
+            console.log('Web3 is available:', typeof Web3);
+        });
+
+        // Handle network changes
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('chainChanged', (chainId) => {
+                console.log('Chain changed to:', chainId);
+                const targetChainId = '0x' + CHAIN_ID.toString(16);
+                if (chainId === targetChainId) {
+                    console.log('Connected to correct network, refreshing data...');
+                    refreshData();
+                } else {
+                    console.log('Wrong network detected');
+                }
+            });
+
+            window.ethereum.on('accountsChanged', (accounts) => {
+                console.log('Accounts changed:', accounts);
+                if (accounts.length > 0) {
+                    userAccount = accounts[0];
+                    updateWalletUI();
+                    refreshData();
+                } else {
+                    userAccount = null;
+                    const btn = document.querySelector('.connect-wallet');
+                    btn.textContent = 'Connect Wallet';
+                    btn.classList.remove('connected');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
 
         // Add modal styles
         const modalStyles = `
